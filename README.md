@@ -1,8 +1,6 @@
-<p style= "text-align: center; font-size: 2.5em">Zentinel</p>
+<h1 align="center">Zentinel</h1>
 
-<p style= "text-align: center; font-size: 1em">A modular and simple TypeScript logging and monitoring library for Express applications</p>
-
----
+<p align="center">A modular and simple TypeScript logging and monitoring library for Express applications</p>
 
 ## Features
 
@@ -177,4 +175,3 @@ BREAKING CHANGE: rename `store()` to `storeRequest()`
 ## License
 
 MIT
-
