@@ -1,47 +1,33 @@
-import { appendFile } from "fs";
-import { dirname, join } from "path";
-import { fileURLToPath } from "url";
-import type { Request, Response, NextFunction } from "express";
+// import { appendFile } from "fs";
+// import { dirname } from "path";
+// import { fileURLToPath } from "url";
+import { createCaptureMiddleware } from "./middleware/capture.js";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+// const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const logFilePath = join(__dirname, "access.log");
+// const logFilePath = join(__dirname, "access.log");
 
 // Middleware personalizado
-const customLogger = (req: Request, res: Response, next: NextFunction) => {
-  console.log("Logeger iniciado...");
-  const startTime = process.hrtime(); // Captura tiempo con alta precisión
-  const { method, url, ip } = req;
-  const timestamp = new Date().toISOString();
+const loggerMiddleware = createCaptureMiddleware({
+  captureResponseBody: true,
+  onRecordCaptured: (record) => {
+    // Por ahora mostramos en consola el objeto capturado para verificar los datos de RF-02
+    console.log("\n================ 📊 REGISTRO CAPTURADO ================");
+    console.log("Request ID:", record.request.request_id);
+    console.log("Método & URL:", record.request.method, record.request.full_url);
+    console.log("IP Cliente:", record.request.client_ip);
+    console.log("Request Headers:", record.request.headers);
+    console.log("Request Body:", record.request.body);
+    console.log("------------------------------------------------------");
+    console.log("Status Code:", record.response.status_code);
+    console.log("Latencia:", `${record.response.latency_ms} ms`);
+    console.log("Tamaño Respuesta:", `${record.response.response_size_bytes} bytes`);
+    console.log("Response Body:", record.response.body);
+    if (record.response.error_message) {
+      console.log("Error:", record.response.error_message);
+    }
+    console.log("======================================================\n");
+  },
+});
 
-  // El evento 'finish' se dispara cuando la respuesta se ha enviado al cliente
-  res.on("finish", () => {
-    const { statusCode } = res;
-    const diff = process.hrtime(startTime);
-    const durationInMs = (diff[0] * 1e3 + diff[1] * 1e-6).toFixed(2); // Convierte a milisegundos
-
-    // Crear el objeto de registro estructurado (JSON)
-    const logEntry = {
-      timestamp,
-      method,
-      url,
-      statusCode,
-      duration: `${durationInMs}ms`,
-      ip: ip || req.socket.remoteAddress || "unknown",
-    };
-
-    const logString = JSON.stringify(logEntry) + "\n";
-
-    // 1. Mostrar en consola automáticamente
-    console.log(`[LOG] ${method} ${url} ${statusCode} - ${durationInMs}ms`);
-
-    // 2. Guardar en archivo de forma asíncrona sin bloquear el servidor
-    appendFile(logFilePath, logString, (err) => {
-      if (err) console.error("Error escribiendo en el archivo de log:", err);
-    });
-  });
-
-  next(); // Pasa el control al siguiente middleware o ruta
-};
-
-export default customLogger;
+export default loggerMiddleware;
