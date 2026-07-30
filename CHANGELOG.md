@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/JonnerPaz/zentinel/compare/v1.1.0...v1.2.0) (2026-07-30)
+
+
+### Features
+
+* **utils:** add core utility modules for uuid, masking, pagination, percentiles and timestamps ([4e6ee51](https://github.com/JonnerPaz/zentinel/commit/4e6ee51d479b89b7c918dd8f7a358efee6740044))
+
 ## [1.1.0](https://github.com/JonnerPaz/zentinel/compare/v1.0.0...v1.1.0) (2026-07-30)
 
 
