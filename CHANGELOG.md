@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.3.0](https://github.com/JonnerPaz/zentinel/compare/v1.2.0...v1.3.0) (2026-07-30)
+
+
+### Features
+
+* implement main logger functionality, middleware and tests ([e042329](https://github.com/JonnerPaz/zentinel/commit/e042329c47fced81665c1e40b83c1ca90da1d636))
+* **queue:** add async queue, batch processor and periodic cleanup scheduler ([4e74178](https://github.com/JonnerPaz/zentinel/commit/4e741785d93bf055abf789f4b29710425d15db68))
+* **storage:** add storage adapter interface contract ([ac5037d](https://github.com/JonnerPaz/zentinel/commit/ac5037d8e353fb9deaee7f576ca9e92a712a5097))
+
 ## [1.2.0](https://github.com/JonnerPaz/zentinel/compare/v1.1.0...v1.2.0) (2026-07-30)
 
 
