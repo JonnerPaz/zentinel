@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/JonnerPaz/zentinel/compare/v1.0.0...v1.1.0) (2026-07-30)
+
+
+### Features
+
+* **core:** add core interfaces, uuid utility and initial entry point ([6f80c74](https://github.com/JonnerPaz/zentinel/commit/6f80c7437aa56700392e2d1c9a9a61154b8dd20b))
+
 ## 1.0.0 (2026-07-23)
 
 
