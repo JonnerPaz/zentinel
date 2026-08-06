@@ -1,31 +1,56 @@
 import type { RequestRecord } from "../entities/request-record.js";
-import type { QueryFilters } from "../entities/filters.js";
+import type { LogEntry } from "../entities/log-entry.js";
+import type { QueryFilters, LogFilters } from "../entities/filters.js";
 import type { PaginationResult } from "../entities/pagination.js";
 import type { MetricsResult } from "../entities/metrics.js";
 
+/**
+ * Contrato de Storage (ARCHITECTURE.md).
+ */
 export interface Storage {
   /**
-   * Guarda un lote (batch) de registros de peticiones de forma masiva.
+   * Prepara el almacenamiento (crea tablas/colecciones si no existen).
    */
-  saveBatch(records: RequestRecord[]): Promise<void>;
+  initialize(): Promise<void>;
 
   /**
-   * Recupera una lista paginada de peticiones aplicando filtros.
+   * Guarda un RequestRecord.
    */
-  getRequests(filters: QueryFilters): Promise<PaginationResult<RequestRecord>>;
+  store(request: RequestRecord): Promise<void>;
 
   /**
-   * Obtiene una petición específica por su ID único.
+   * Guarda una entrada de LogEntry.
    */
-  getRequestById(id: string): Promise<RequestRecord | null>;
+  storeLog(entry: LogEntry): Promise<void>;
 
   /**
-   * Calcula y retorna las métricas globales para la API de monitoreo (RF-03).
+   * Obtiene un RequestRecord por su id.
+   */
+  getById(id: string): Promise<RequestRecord | null>;
+
+  /**
+   * Consulta paginada de RequestRecords con filtros.
+   */
+  query(filters: QueryFilters): Promise<PaginationResult<RequestRecord>>;
+
+  /**
+   * Consulta paginada de LogEntries con filtros.
+   */
+  getLogs(filters: LogFilters): Promise<PaginationResult<LogEntry>>;
+
+  /**
+   * Calcula y retorna las métricas globales.
    */
   getMetrics(): Promise<MetricsResult>;
 
   /**
-   * Elimina registros anteriores a una fecha específica (retención/limpieza).
+   * Elimina los registros vencidos según la retención configurada.
+   * Retorna la cantidad de registros eliminados.
    */
-  deleteOlderThan(date: Date): Promise<number>;
+  cleanup(): Promise<number>;
+
+  /**
+   * Cierra conexiones/recursos del almacenamiento.
+   */
+  close(): Promise<void>;
 }

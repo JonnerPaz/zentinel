@@ -1,4 +1,4 @@
-type LogLevel = "INFO" | "WARNING" | "ERROR" | "DEBUG";
+export type LogLevel = "INFO" | "WARNING" | "ERROR" | "DEBUG";
 
 export interface LogEntry {
   id: string; // UUID v4

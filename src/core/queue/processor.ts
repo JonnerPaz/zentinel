@@ -1,5 +1,12 @@
 import type { RequestRecord } from "../entities/request-record.js";
+import type { LogEntry } from "../entities/log-entry.js";
 import type { Storage } from "../storage/interface.js";
+
+/**
+ * Elementos que fluyen por AsyncQueue → BatchProcessor → Storage
+ * (tanto RequestRecord como LogEntry, según el flujo de ARCHITECTURE.md).
+ */
+export type QueueItem = { kind: "request"; record: RequestRecord } | { kind: "log"; entry: LogEntry };
 
 export interface BatchProcessorOptions {
   batchSize?: number; // Cantidad máxima de registros por lote (ej. 50)
@@ -7,34 +14,34 @@ export interface BatchProcessorOptions {
 }
 
 export class AsyncQueue {
-  private queue: RequestRecord[] = [];
+  private items: QueueItem[] = [];
 
   /**
-   * Encola un registro en memoria de forma no bloqueante.
+   * Encola un elemento en memoria de forma no bloqueante.
    */
-  public enqueue(record: RequestRecord): void {
-    this.queue.push(record);
+  public enqueue(item: QueueItem): void {
+    this.items.push(item);
   }
 
   /**
    * Extrae todos los elementos acumulados actualmente en la cola.
    */
-  public dequeueAll(): RequestRecord[] {
-    return this.queue.splice(0, this.queue.length);
+  public dequeueAll(): QueueItem[] {
+    return this.items.splice(0, this.items.length);
   }
 
   /**
    * Retorna la cantidad de elementos en la cola.
    */
   public size(): number {
-    return this.queue.length;
+    return this.items.length;
   }
 }
 
 export class BatchProcessor {
   private queue: AsyncQueue;
   private storage: Storage;
-  private batchSize: number; // ¡Ahora sí la usamos!
+  private batchSize: number;
   private flushIntervalMs: number;
   private timer: NodeJS.Timeout | null = null;
   private isProcessing = false;
@@ -66,11 +73,15 @@ export class BatchProcessor {
     this.isProcessing = true;
 
     try {
-      // Extrae registros de la cola
-      const recordsToProcess = this.queue.dequeueAll();
-      if (recordsToProcess.length > 0) {
-        // Guarda todos los registros de un solo viaje a la base de datos / archivo
-        await this.storage.saveBatch(recordsToProcess);
+      // Extrae los elementos acumulados de la cola
+      const itemsToProcess = this.queue.dequeueAll();
+      for (const item of itemsToProcess) {
+        // Persiste a través del contrato Storage (store / storeLog)
+        if (item.kind === "request") {
+          await this.storage.store(item.record);
+        } else {
+          await this.storage.storeLog(item.entry);
+        }
       }
     } catch (error) {
       console.error("[Logger BatchProcessor] Error guardando el lote:", error);

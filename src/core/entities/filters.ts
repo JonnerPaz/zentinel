@@ -1,4 +1,5 @@
-type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "OPTIONS" | "HEAD";
+import type { HttpMethod } from "./request-record.js";
+import type { LogLevel } from "./log-entry.js";
 
 export interface QueryFilters {
   methods?: HttpMethod[];
@@ -10,6 +11,15 @@ export interface QueryFilters {
   latencyMin?: number; // ms
   latencyMax?: number; // ms
   hasError?: boolean;
+  cursor?: string;
+  limit?: number; // default: 50, max: 200
+  order?: "asc" | "desc"; // default: 'desc'
+}
+
+export interface LogFilters {
+  levels?: LogLevel[];
+  dateFrom?: string; // ISO 8601
+  dateTo?: string; // ISO 8601
   cursor?: string;
   limit?: number; // default: 50, max: 200
   order?: "asc" | "desc"; // default: 'desc'

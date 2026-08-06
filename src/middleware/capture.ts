@@ -3,30 +3,31 @@ import type { RequestRecord, HttpMethod } from "../core/entities/request-record.
 import { generateUUID } from "../core/utils/uuid.js";
 import { maskHeaders } from "../core/utils/masking.js";
 
-// Opción de configuración si necesitas deshabilitar o limitar el body
 export interface CaptureOptions {
   captureResponseBody?: boolean;
+  /** Headers sensibles adicionales (masking.headers de la config). */
+  maskingHeaders?: string[];
   onRecordCaptured?: (record: RequestRecord) => void;
 }
 
 export function createCaptureMiddleware(options: CaptureOptions = {}) {
-  const { captureResponseBody = true, onRecordCaptured } = options;
+  const { captureResponseBody = true, maskingHeaders = [], onRecordCaptured } = options;
 
   return (req: Request, res: Response, next: NextFunction): void => {
     // 1. Iniciar medición de alta precisión (HR Time) y datos base del Request
     const startTime = process.hrtime.bigint();
-    const requestId = generateUUID();
+    const id = generateUUID();
     const timestamp = new Date().toISOString();
 
     // Inyectamos el ID en los headers de la request/response para trazabilidad
-    req.headers["x-request-id"] = requestId;
-    res.setHeader("X-Request-Id", requestId);
+    req.headers["x-request-id"] = id;
+    res.setHeader("X-Request-Id", id);
 
     // Capturar Body original si existe
     const requestBody = req.body ?? null;
 
     // 2. Interceptar el Body de la Respuesta (Monkey-Patching de res.send / res.write)
-    let responseBody: any = null;
+    let responseBody: unknown = null;
     let responseSizeBytes = 0;
 
     const originalSend = res.send;
@@ -76,32 +77,33 @@ export function createCaptureMiddleware(options: CaptureOptions = {}) {
       const errorMessage = statusCode >= 400 ? err?.message || res.statusMessage : undefined;
       const stackTrace = statusCode >= 500 && err ? err.stack : undefined;
 
-      // 4. Construir la entidad RequestRecord requerida por RF-02
+      const clientIp = req.ip || req.socket.remoteAddress;
+      const userAgent = req.get("user-agent");
+      const responseHeaders = maskHeaders(res.getHeaders(), maskingHeaders);
+
+      // 4. Construir la entidad RequestRecord documentada (RF-02)
       const record: RequestRecord = {
-        request: {
-          request_id: requestId,
-          timestamp,
-          method: req.method as HttpMethod,
-          full_url: fullUrl,
-          path: req.path || req.baseUrl,
-          headers: maskHeaders(req.headers), // Usamos tu util de enmascaramiento
-          query_params: req.query || {},
-          body: requestBody,
-          client_ip: req.ip || req.socket.remoteAddress || "unknown",
-          user_agent: req.get("user-agent") || "unknown",
-        },
-        response: {
-          status_code: statusCode,
-          headers: maskHeaders(res.getHeaders()),
-          body: responseBody,
-          latency_ms: Math.round(latencyMs),
-          response_size_bytes: responseSizeBytes || Number(res.get("content-length") || 0),
-          error_message: errorMessage,
-          stack_trace: stackTrace,
-        },
+        id,
+        timestamp,
+        method: req.method as HttpMethod,
+        path: req.path || req.baseUrl,
+        fullUrl,
+        statusCode,
+        latencyMs: Math.round(latencyMs),
+        ...(clientIp ? { clientIp } : {}),
+        ...(userAgent ? { userAgent } : {}),
+        requestHeaders: maskHeaders(req.headers, maskingHeaders) as Record<string, string>,
+        ...(Object.keys(req.query).length > 0 ? { requestQuery: req.query as Record<string, string> } : {}),
+        requestBody,
+        ...(Object.keys(responseHeaders).length > 0 ? { responseHeaders: responseHeaders as Record<string, string> } : {}),
+        ...(responseBody !== null ? { responseBody } : {}),
+        responseSizeBytes: responseSizeBytes || Number(res.get("content-length") || 0),
+        ...(errorMessage ? { errorMessage } : {}),
+        ...(stackTrace ? { stackTrace } : {}),
+        createdAt: timestamp,
       };
 
-      // 5. Enviar a tu cola asíncrona o procesador sin bloquear
+      // 5. Enviar al logger sin bloquear el evento HTTP
       if (onRecordCaptured) {
         // Usa setImmediate para no impactar los I/O del evento HTTP
         setImmediate(() => {

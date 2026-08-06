@@ -1,26 +1,22 @@
-// src/core/entities/request-record.ts
 export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "OPTIONS" | "HEAD";
 
 export interface RequestRecord {
-  request: {
-    request_id: string;
-    timestamp: string;
-    method: HttpMethod;
-    full_url: string;
-    path: string;
-    headers: Record<string, any>;
-    query_params: Record<string, any>;
-    body: any;
-    client_ip: string;
-    user_agent: string;
-  };
-  response: {
-    status_code: number;
-    headers: Record<string, any>;
-    body: any;
-    latency_ms: number;
-    response_size_bytes: number;
-    error_message?: string;
-    stack_trace?: string;
-  };
+  id: string; // UUID v4
+  timestamp: string; // ISO 8601
+  method: HttpMethod;
+  path: string;
+  fullUrl: string;
+  statusCode: number; // 100-599
+  latencyMs: number;
+  clientIp?: string; // soporta IPv6
+  userAgent?: string;
+  requestHeaders?: Record<string, string>;
+  requestQuery?: Record<string, string>;
+  requestBody?: unknown;
+  responseHeaders?: Record<string, string>;
+  responseBody?: unknown;
+  responseSizeBytes?: number;
+  errorMessage?: string;
+  stackTrace?: string;
+  createdAt: string; // ISO 8601
 }

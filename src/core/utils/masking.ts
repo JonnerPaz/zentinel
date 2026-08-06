@@ -12,16 +12,22 @@ const SENSITIVE_KEYS = new Set([
 ]);
 
 /**
- * Recibe un objeto de headers y reemplaza los valores sensibles por '***MASKED***'
+ * Recibe un objeto de headers y reemplaza los valores sensibles por '***MASKED***'.
+ * `extraKeys` permite agregar headers configurables desde la config (masking.headers).
  */
-export function maskHeaders(headers: Record<string, any>): Record<string, any> {
+export function maskHeaders(headers: Record<string, any>, extraKeys: string[] = []): Record<string, any> {
   if (!headers || typeof headers !== "object") return {};
+
+  const keys = new Set(SENSITIVE_KEYS);
+  for (const key of extraKeys) {
+    keys.add(key.toLowerCase());
+  }
 
   const masked: Record<string, any> = {};
 
   for (const [key, value] of Object.entries(headers)) {
     const lowerKey = key.toLowerCase();
-    if (SENSITIVE_KEYS.has(lowerKey)) {
+    if (keys.has(lowerKey)) {
       masked[key] = "***MASKED***";
     } else {
       masked[key] = value;
