@@ -2,11 +2,12 @@
   "name": "zentinel",
   "version": "1.3.0",
   "description": "",
-  "main": "main.ts",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
   "scripts": {
     "build": "pnpm tsc",
-    "dev": "tsx watch src/main.ts",
-    "start": "tsx src/main.ts",
+    "dev": "tsx watch tests/LoggerTest.ts",
+    "start": "tsx tests/LoggerTest.ts",
     "test": "tsx tests/LoggerTest.ts"
   },
   "keywords": [],

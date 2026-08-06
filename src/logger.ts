@@ -10,18 +10,21 @@ export default class Logger {
     this.engine = new InternalLogger(options);
   }
 
-  attach(app: Express, basePath = "/api/monitoring") {
+  /**
+   * Conveniencia: monta el middleware de captura para toda la app y el
+   * router de monitoreo bajo `basePath`.
+   */
+  async attach(app: Express, basePath = "/api/monitoring") {
     app.use(this.engine.middleware());
-
-    // this.engine.mountMonitoring(app, basePath);
+    await this.engine.mountMonitoring(app, basePath);
   }
 
   middleware() {
     return this.engine.middleware();
   }
 
-  mountMonitoring(app: Express, basePath?: string) {
-    // this.engine.mountMonitoring(app, basePath);
+  mountMonitoring(app: Express, basePath = "/api/monitoring") {
+    return this.engine.mountMonitoring(app, basePath);
   }
 
   logInfo(...args: Parameters<InternalLogger["logInfo"]>) {

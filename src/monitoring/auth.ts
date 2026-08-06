@@ -10,7 +10,7 @@ export function createAuthMiddleware(config: LoggerConfig) {
 
   // Si no hay credenciales configuradas, no hay autenticación
   if (!username || !password) {
-    return (req: Request, res: Response, next: NextFunction) => next();
+    return (_req: Request, _res: Response, next: NextFunction) => next();
   }
 
   return (req: Request, res: Response, next: NextFunction) => {
@@ -30,6 +30,6 @@ export function createAuthMiddleware(config: LoggerConfig) {
       return res.status(401).json({ error: "Credenciales inválidas" });
     }
 
-    next();
+    return next();
   };
 }

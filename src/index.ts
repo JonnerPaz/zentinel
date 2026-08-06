@@ -1,4 +1,5 @@
 // Punto de entrada del paquete: exporta el Logger público (ARCHITECTURE.md).
+import type { Express } from "express";
 import { createCaptureMiddleware } from "./middleware/capture.js";
 import { AsyncQueue, BatchProcessor } from "./core/queue/processor.js";
 import { CleanupScheduler } from "./core/queue/scheduler.js";
@@ -31,6 +32,7 @@ export class Logger {
   private readonly queue: AsyncQueue;
   private readonly processor: BatchProcessor;
   private readonly scheduler: CleanupScheduler;
+  private readonly ready: Promise<void>;
 
   constructor(options: LoggerOptions = {}) {
     this.config = loadConfig(options.config, options.configFile);
@@ -57,13 +59,15 @@ export class Logger {
     }
 
     this.storage = StorageFactory.create(this.config.strategy, storageOptions);
-    // Inicializa tablas/colecciones (síncrono en memory/sqlite).
-    void this.storage.initialize();
+    // Inicialización diferida: tablas/colecciones. Los flushes y las consultas
+    // esperan a `ready` antes de tocar el storage (evita la carrera de inicio).
+    this.ready = this.storage.initialize();
 
     this.queue = new AsyncQueue();
     this.processor = new BatchProcessor(this.queue, this.storage, {
       batchSize: this.config.batch.maxSize,
       flushIntervalMs: this.config.batch.flushIntervalMs,
+      beforeFlush: () => this.ready,
     });
     this.processor.start();
 
@@ -161,6 +165,7 @@ export class Logger {
    * Consulta paginada de RequestRecords con filtros.
    */
   public async queryRequests(filters?: QueryFilters): Promise<PaginationResult<RequestRecord>> {
+    await this.ready;
     return this.storage.query(filters ?? {});
   }
 
@@ -168,6 +173,7 @@ export class Logger {
    * Obtiene un RequestRecord por su id.
    */
   public async getRequestById(id: string): Promise<RequestRecord | null> {
+    await this.ready;
     return this.storage.getById(id);
   }
 
@@ -175,6 +181,7 @@ export class Logger {
    * Consulta paginada de LogEntries con filtros.
    */
   public async getLogs(filters?: LogFilters): Promise<PaginationResult<LogEntry>> {
+    await this.ready;
     return this.storage.getLogs(filters ?? {});
   }
 
@@ -182,7 +189,18 @@ export class Logger {
    * Métricas agregadas globales.
    */
   public async getMetrics(): Promise<MetricsResult> {
+    await this.ready;
     return this.storage.getMetrics();
+  }
+
+  /**
+   * Monta el router de monitoreo (API + dashboard) bajo `basePath`.
+   * El middleware de captura se monta por separado vía `middleware()`.
+   */
+  public async mountMonitoring(app: Express, basePath = "/api/monitoring"): Promise<void> {
+    const { createMonitoringRouter } = await import("./monitoring/router.js");
+    const router = createMonitoringRouter(this, this.config);
+    app.use(basePath, router);
   }
 
   /**
@@ -191,15 +209,9 @@ export class Logger {
   public async close(): Promise<void> {
     await this.processor.stop();
     this.scheduler.stop();
+    await this.ready;
     await this.storage.close();
   }
-
-  // public async mountMonitoring(app: Express, basePath = "/api/monitoring") {
-  //   app.use(basePath, this.middleware());
-  //   const { createMonitoringRouter } = await import("./monitoring/router.js");
-  //   const router = createMonitoringRouter(this, this.config);
-  //   app.use(basePath, router);
-  // }
 }
 
 export { AsyncQueue, BatchProcessor } from "./core/queue/processor.js";

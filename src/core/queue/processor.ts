@@ -11,6 +11,12 @@ export type QueueItem = { kind: "request"; record: RequestRecord } | { kind: "lo
 export interface BatchProcessorOptions {
   batchSize?: number; // Cantidad máxima de registros por lote (ej. 50)
   flushIntervalMs?: number; // Tiempo máximo de espera antes de vaciar (ej. 1000ms)
+  /**
+   * Hook opcional que se espera antes de persistir cada lote.
+   * Permite que el Logger garantice que el storage terminó de inicializarse
+   * (p. ej. tablas creadas) sin perder registros encolados.
+   */
+  beforeFlush?: () => Promise<void>;
 }
 
 export class AsyncQueue {
@@ -43,6 +49,7 @@ export class BatchProcessor {
   private storage: Storage;
   private batchSize: number;
   private flushIntervalMs: number;
+  private beforeFlush: (() => Promise<void>) | undefined;
   private timer: NodeJS.Timeout | null = null;
   private isProcessing = false;
 
@@ -51,6 +58,7 @@ export class BatchProcessor {
     this.storage = storage;
     this.batchSize = options.batchSize ?? 50;
     this.flushIntervalMs = options.flushIntervalMs ?? 1000;
+    this.beforeFlush = options.beforeFlush;
   }
 
   /**
@@ -73,6 +81,9 @@ export class BatchProcessor {
     this.isProcessing = true;
 
     try {
+      if (this.beforeFlush) {
+        await this.beforeFlush();
+      }
       // Extrae los elementos acumulados de la cola
       const itemsToProcess = this.queue.dequeueAll();
       for (const item of itemsToProcess) {

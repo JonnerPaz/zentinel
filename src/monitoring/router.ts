@@ -2,14 +2,17 @@ import { Router } from "express";
 import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
-import type Logger from "../logger.js";
 import type { LoggerConfig } from "../config/defaults.js";
 import { createAuthMiddleware } from "./auth.js";
 import type { LogLevel } from "../core/entities/log-entry.js";
 import type { LogFilters } from "../core/entities/filters.js";
 import type { QueryFilters } from "../core/entities/filters.js";
 import type { HttpMethod } from "../core/entities/request-record.js";
-import type { Request } from "express";
+import type { RequestRecord } from "../core/entities/request-record.js";
+import type { LogEntry } from "../core/entities/log-entry.js";
+import type { MetricsResult } from "../core/entities/metrics.js";
+import type { PaginationResult } from "../core/entities/pagination.js";
+import type { Request, Response } from "express";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -23,6 +26,16 @@ function getDashboardHtml(): string {
 }
 
 /**
+ * Vista mínima de Logger que necesita el router.
+ */
+export interface MonitoringLogger {
+  queryRequests(filters?: QueryFilters): Promise<PaginationResult<RequestRecord>>;
+  getRequestById(id: string): Promise<RequestRecord | null>;
+  getLogs(filters?: LogFilters): Promise<PaginationResult<LogEntry>>;
+  getMetrics(): Promise<MetricsResult>;
+}
+
+/**
  * Crea un router Express con los endpoints de monitoreo:
  *
  * GET  /              → Sirve la interfaz web (HTML/CSS/JS)
@@ -33,23 +46,26 @@ function getDashboardHtml(): string {
  *
  * La autenticación se aplica según la configuración.
  */
-export function createMonitoringRouter(logger: Logger, config: LoggerConfig): Router {
+export function createMonitoringRouter(logger: MonitoringLogger, config: LoggerConfig): Router {
   const router = Router();
   const auth = createAuthMiddleware(config);
 
-  // GET / — Sirve la interfaz web
-  router.get("/", auth, (req, res) => {
+  const serveDashboard = (_req: Request, res: Response) => {
     res.type("html").send(getDashboardHtml());
-  });
+  };
+
+  // GET / y GET /dashboard — Sirven la interfaz web (dashboard)
+  router.get("/", auth, serveDashboard);
+  router.get("/dashboard", auth, serveDashboard);
 
   // GET /metrics — Métricas en JSON
-  router.get("/metrics", auth, async (req, res) => {
+  router.get("/metrics", auth, async (_req, res) => {
     try {
       const metrics = await logger.getMetrics();
-      res.json(metrics);
+      return res.json(metrics);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Error desconocido";
-      res.status(500).json({ error: "Error al obtener métricas", detail: message });
+      return res.status(500).json({ error: "Error al obtener métricas", detail: message });
     }
   });
 
@@ -99,10 +115,10 @@ export function createMonitoringRouter(logger: Logger, config: LoggerConfig): Ro
       }
 
       const result = await logger.queryRequests(filters);
-      res.json(result);
+      return res.json(result);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Error desconocido";
-      res.status(500).json({ error: "Error al obtener requests", detail: message });
+      return res.status(500).json({ error: "Error al obtener requests", detail: message });
     }
   });
 
@@ -114,10 +130,10 @@ export function createMonitoringRouter(logger: Logger, config: LoggerConfig): Ro
       }
       const record = await logger.getRequestById(req.params.id);
       if (!record) return res.status(404).json({ error: "Request no encontrada" });
-      res.json(record);
+      return res.json(record);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Error desconocido";
-      res.status(500).json({ error: "Error al obtener detalle", detail: message });
+      return res.status(500).json({ error: "Error al obtener detalle", detail: message });
     }
   });
 
@@ -147,10 +163,10 @@ export function createMonitoringRouter(logger: Logger, config: LoggerConfig): Ro
       }
 
       const result = await logger.getLogs(filters);
-      res.json(result);
+      return res.json(result);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Error desconocido";
-      res.status(500).json({ error: "Error al obtener logs", detail: message });
+      return res.status(500).json({ error: "Error al obtener logs", detail: message });
     }
   });
 
