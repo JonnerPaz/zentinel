@@ -1,12 +1,11 @@
 import express from "express";
-import zentinel from "../src/main.js";
+import Logger from "../src/logger.js";
 import type { Response } from "express";
 
 const app = express();
 const PORT = 3000;
-const logger = new zentinel(); // Puedes cambiar a "file" si implementas almacenamiento en archivo
+const logger = new Logger(); // Puedes cambiar a "file" si implementas almacenamiento en archivo
 // Activa tu logger propio para TODAS las llamadas entrantes
-app.use(logger.init());
 app.use(express.json());
 
 // Ruta GET simple (Éxito 200)
@@ -38,6 +37,7 @@ app.get("/api/error-500", (req, res) => {
 
 // 4. Iniciar el servidor
 app.listen(PORT, () => {
+  // logger.attach(app, PORT); // Activa el middleware de captura de logs
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
   console.log(`Prueba hacer peticiones a http://localhost:${PORT}/api/users`);
 });

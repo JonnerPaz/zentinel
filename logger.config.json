@@ -1,0 +1,21 @@
+{
+  "strategy": "sqlite",
+  "sqlite": {
+    "dbPath": "./data/logs.db"
+  },
+  "batch": {
+    "maxSize": 50,
+    "flushIntervalMs": 1000
+  },
+  "retention": {
+    "requestDays": 30,
+    "logDays": 14
+  },
+  "monitoring": {
+    "username": "admin",
+    "password": "secret"
+  },
+  "masking": {
+    "headers": ["authorization", "cookie", "x-api-key"]
+  }
+}

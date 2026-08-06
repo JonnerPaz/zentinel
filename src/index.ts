@@ -46,7 +46,10 @@ export class Logger {
         storageOptions = { ...commonOptions, dbPath: this.config.sqlite.dbPath };
         break;
       case "postgres":
-        storageOptions = { ...commonOptions, connectionString: this.config.postgres.connectionString };
+        storageOptions = {
+          ...commonOptions,
+          connectionString: this.config.postgres.connectionString,
+        };
         break;
       default:
         storageOptions = { ...commonOptions };
@@ -76,6 +79,23 @@ export class Logger {
       captureResponseBody: true,
       maskingHeaders: this.config.masking.headers,
       onRecordCaptured: (record) => {
+        // Por ahora mostramos en consola el objeto capturado para verificar los datos de RF-02
+        console.log("\n================ 📊 REGISTRO CAPTURADO ================");
+        console.log("Request ID:", record.id);
+        console.log("Método & URL:", record.method, record.fullUrl);
+        console.log("IP Cliente:", record.clientIp);
+        console.log("Request Headers:", record.requestHeaders);
+        console.log("Request Body:", record.requestBody);
+        console.log("------------------------------------------------------");
+        console.log("Status Code:", record.statusCode);
+        console.log("Latencia:", `${record.latencyMs} ms`);
+        console.log("Tamaño Respuesta:", `${record.responseSizeBytes} bytes`);
+        console.log("Response Body:", record.responseBody);
+        if (record.errorMessage) {
+          console.log("Error:", record.errorMessage);
+        }
+        console.log("======================================================\n");
+
         this.queue.enqueue({ kind: "request", record });
         this.processor.checkAutoFlush();
       },
@@ -85,7 +105,12 @@ export class Logger {
   /**
    * Emite una entrada de log con el nivel indicado.
    */
-  private emit(level: LogLevel, message: string, metadata?: Record<string, unknown>, context?: LogEntry["context"]): void {
+  private emit(
+    level: LogLevel,
+    message: string,
+    metadata?: Record<string, unknown>,
+    context?: LogEntry["context"],
+  ): void {
     const timestamp = getCurrentISOString();
     const entry: LogEntry = {
       id: generateUUID(),
@@ -100,19 +125,35 @@ export class Logger {
     this.processor.checkAutoFlush();
   }
 
-  public logInfo(message: string, metadata?: Record<string, unknown>, context?: LogEntry["context"]): void {
+  public logInfo(
+    message: string,
+    metadata?: Record<string, unknown>,
+    context?: LogEntry["context"],
+  ): void {
     this.emit("INFO", message, metadata, context);
   }
 
-  public logWarning(message: string, metadata?: Record<string, unknown>, context?: LogEntry["context"]): void {
+  public logWarning(
+    message: string,
+    metadata?: Record<string, unknown>,
+    context?: LogEntry["context"],
+  ): void {
     this.emit("WARNING", message, metadata, context);
   }
 
-  public logError(message: string, metadata?: Record<string, unknown>, context?: LogEntry["context"]): void {
+  public logError(
+    message: string,
+    metadata?: Record<string, unknown>,
+    context?: LogEntry["context"],
+  ): void {
     this.emit("ERROR", message, metadata, context);
   }
 
-  public logDebug(message: string, metadata?: Record<string, unknown>, context?: LogEntry["context"]): void {
+  public logDebug(
+    message: string,
+    metadata?: Record<string, unknown>,
+    context?: LogEntry["context"],
+  ): void {
     this.emit("DEBUG", message, metadata, context);
   }
 
@@ -152,6 +193,13 @@ export class Logger {
     this.scheduler.stop();
     await this.storage.close();
   }
+
+  // public async mountMonitoring(app: Express, basePath = "/api/monitoring") {
+  //   app.use(basePath, this.middleware());
+  //   const { createMonitoringRouter } = await import("./monitoring/router.js");
+  //   const router = createMonitoringRouter(this, this.config);
+  //   app.use(basePath, router);
+  // }
 }
 
 export { AsyncQueue, BatchProcessor } from "./core/queue/processor.js";

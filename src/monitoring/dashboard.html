@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zentinel — Monitoreo</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --card: #1a1d28;
+      --card-hover: #222638;
+      --border: #2a2e3a;
+      --text: #e1e4eb;
+      --text-dim: #8b8fa3;
+      --accent: #6c8cff;
+      --accent-dim: #4a6bcf;
+      --green: #34d399;
+      --yellow: #fbbf24;
+      --orange: #fb923c;
+      --red: #f87171;
+      --blue: #60a5fa;
+      --purple: #a78bfa;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+    .header-info .uptime { color: var(--green); }
+    .header-info .version { color: var(--accent); }
+    .logout-btn {
+      padding: 6px 14px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all .2s;
+    }
+    .logout-btn:hover {
+      background: var(--red);
+      color: white;
+      border-color: var(--red);
+    }
+    .refresh-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+    .refresh-bar button {
+      padding: 6px 16px;
+      background: var(--accent);
+      border: none;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background .2s;
+    }
+    .refresh-bar button:hover { background: var(--accent-dim); }
+    .auto-refresh { display: flex; align-items: center; gap: 8px; }
+    .auto-refresh input { accent-color: var(--accent); }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 18px;
+      border: 1px solid var(--border);
+      transition: border-color .2s;
+    }
+    .card:hover { border-color: var(--accent); }
+    .card .label {
+      font-size: 12px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 8px;
+    }
+    .card .value {
+      font-size: 28px;
+      font-weight: 700;
+    }
+    .card .sub {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+    .value.green { color: var(--green); }
+    .value.yellow { color: var(--yellow); }
+    .value.orange { color: var(--orange); }
+    .value.red { color: var(--red); }
+    .value.blue { color: var(--blue); }
+    .value.purple { color: var(--purple); }
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 14px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title span { color: var(--accent); }
+    .charts-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 768px) {
+      .charts-row { grid-template-columns: 1fr; }
+    }
+    .chart-card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 18px;
+      border: 1px solid var(--border);
+    }
+    .chart-card h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 14px;
+      color: var(--text-dim);
+    }
+    .bar-chart { display: flex; gap: 12px; align-items: flex-end; height: 120px; padding-top: 8px; }
+    .bar-wrapper { display: flex; flex-direction: column; align-items: center; flex: 1; height: 100%; justify-content: flex-end; }
+    .bar {
+      width: 100%;
+      max-width: 40px;
+      border-radius: 4px 4px 0 0;
+      transition: height .4s ease;
+      min-height: 4px;
+    }
+    .bar-label { font-size: 11px; color: var(--text-dim); margin-top: 6px; }
+    .bar-value { font-size: 10px; color: var(--text-dim); margin-bottom: 4px; }
+    .status-donut {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .donut-segment {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .donut-circle {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 700;
+      position: relative;
+    }
+    .donut-label { font-size: 11px; color: var(--text-dim); }
+    .table-container {
+      background: var(--card);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .table-container h3 {
+      padding: 14px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      text-align: left;
+      padding: 10px 18px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--text-dim);
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 10px 18px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover { background: var(--card-hover); }
+    .status-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .status-2xx { background: rgba(52, 211, 153, .15); color: var(--green); }
+    .status-3xx { background: rgba(96, 165, 250, .15); color: var(--blue); }
+    .status-4xx { background: rgba(251, 191, 36, .15); color: var(--yellow); }
+    .status-5xx { background: rgba(248, 113, 113, .15); color: var(--red); }
+    .latency-bar {
+      display: inline-block;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--accent);
+      min-width: 4px;
+    }
+    .loading { opacity: .5; pointer-events: none; }
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-dim);
+    }
+    .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+    .error-state {
+      text-align: center;
+      padding: 20px;
+      color: var(--red);
+      background: rgba(248, 113, 113, .1);
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    .percentiles {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .percentile-card {
+      background: var(--card);
+      border-radius: 8px;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      text-align: center;
+      flex: 1;
+      min-width: 80px;
+    }
+    .percentile-card .p-label { font-size: 11px; color: var(--text-dim); }
+    .percentile-card .p-value { font-size: 18px; font-weight: 700; margin-top: 4px; }
+    .p50 { color: var(--green); }
+    .p95 { color: var(--yellow); }
+    .p99 { color: var(--red); }
+    .login-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 17, 23, .95);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .login-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+    }
+    .login-box h2 {
+      font-size: 22px;
+      margin-bottom: 8px;
+    }
+    .login-box p {
+      color: var(--text-dim);
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+    .login-box input {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      margin-bottom: 12px;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .login-box input:focus { border-color: var(--accent); }
+    .login-box button {
+      width: 100%;
+      padding: 10px;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .login-box button:hover { background: var(--accent-dim); }
+    .login-box .error-msg {
+      color: var(--red);
+      font-size: 13px;
+      margin-top: 12px;
+    }
+    .hidden { display: none !important; }
+    .monitoring-content.hidden { display: none; }
+  </style>
+</head>
+<body>
+  <!-- Login overlay -->
+  <div id="loginOverlay" class="login-overlay hidden">
+    <div class="login-box">
+      <h2>🔐 Zentinel</h2>
+      <p>Ingresa tus credenciales de monitoreo</p>
+      <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username" />
+      <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password" />
+      <button id="loginBtn">Ingresar</button>
+      <div id="loginError" class="error-msg hidden">Credenciales inválidas</div>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div id="mainContent" class="monitoring-content">
+    <div class="header">
+      <h1>📊 Zentinel · Monitoreo</h1>
+      <div class="header-info">
+        <span class="uptime" id="uptimeDisplay">⏱ —</span>
+        <span class="version" id="versionDisplay">v—</span>
+        <button id="logoutBtn" class="logout-btn hidden">Cerrar sesión</button>
+      </div>
+    </div>
+
+    <div class="refresh-bar">
+      <div class="auto-refresh">
+        <input type="checkbox" id="autoRefresh" checked />
+        <label for="autoRefresh">Auto-actualizar cada 10s</label>
+        <span id="lastUpdate" style="margin-left:12px;">—</span>
+      </div>
+      <button id="refreshBtn">⟳ Actualizar</button>
+    </div>
+
+    <!-- Summary cards -->
+    <div class="grid" id="summaryCards">
+      <div class="card"><div class="label">Total Requests</div><div class="value blue" id="totalRequests">—</div></div>
+      <div class="card"><div class="label">Tasa / min</div><div class="value green" id="ratePerMinute">—</div></div>
+      <div class="card"><div class="label">Latencia Promedio</div><div class="value purple" id="avgLatency">— ms</div><div class="sub" id="latencyRange">—</div></div>
+      <div class="card"><div class="label">Errores 4xx</div><div class="value yellow" id="total4xx">—</div></div>
+      <div class="card"><div class="label">Errores 5xx</div><div class="value red" id="total5xx">—</div></div>
+    </div>
+
+    <!-- Percentiles -->
+    <div class="section-title">📈 <span>Percentiles de Latencia</span></div>
+    <div class="percentiles" id="percentilesContainer">
+      <div class="percentile-card"><div class="p-label">p50</div><div class="p-value p50" id="p50">—</div></div>
+      <div class="percentile-card"><div class="p-label">p95</div><div class="p-value p95" id="p95">—</div></div>
+      <div class="percentile-card"><div class="p-label">p99</div><div class="p-value p99" id="p99">—</div></div>
+    </div>
+
+    <!-- Charts row -->
+    <div class="charts-row">
+      <div class="chart-card">
+        <h3>🔷 Requests por Método HTTP</h3>
+        <div class="bar-chart" id="methodChart"></div>
+      </div>
+      <div class="chart-card">
+        <h3>🔶 Distribución por Status Code</h3>
+        <div class="status-donut" id="statusDonut"></div>
+      </div>
+    </div>
+
+    <!-- Top endpoints -->
+    <div class="section-title">🏆 <span>Top 10 Endpoints</span></div>
+    <div class="table-container" id="topEndpointsTable">
+      <h3>Más solicitados</h3>
+      <table><thead><tr><th>#</th><th>Endpoint</th><th>Requests</th><th>% del total</th></tr></thead><tbody id="topEndpointsBody"></tbody></table>
+    </div>
+
+    <!-- Slowest endpoints -->
+    <div class="section-title">🐢 <span>Top 10 Endpoints más Lentos</span></div>
+    <div class="table-container" id="slowestEndpointsTable">
+      <h3>Latencia promedio (ms)</h3>
+      <table><thead><tr><th>#</th><th>Endpoint</th><th>Latencia Promedio</th><th>Barra</th></tr></thead><tbody id="slowestEndpointsBody"></tbody></table>
+    </div>
+
+    <!-- Errores por endpoint -->
+    <div class="section-title">⚠️ <span>Errores por Endpoint</span></div>
+    <div class="table-container" id="errorsTable">
+      <h3>Endpoints con errores 4xx/5xx</h3>
+      <table><thead><tr><th>#</th><th>Endpoint</th><th>Errores</th></tr></thead><tbody id="errorsBody"></tbody></table>
+    </div>
+
+    <!-- Recent requests -->
+    <div class="section-title">📋 <span>Requests Recientes</span></div>
+    <div class="table-container" id="recentRequestsTable">
+      <h3>Últimas 20 requests</h3>
+      <table><thead><tr><th>Método</th><th>Path</th><th>Status</th><th
