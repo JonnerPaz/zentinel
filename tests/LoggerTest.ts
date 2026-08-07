@@ -1,9 +1,11 @@
 import express from "express";
-import Logger from "../src/logger.js";
+import Logger from "../src/index.js";
 
 const app = express();
 const PORT = 3000;
 const logger = new Logger();
+
+logger.logInfo("Servidor iniciado");
 
 // Captura TODAS las requests entrantes y monta el monitoreo en /api/monitoring
 app.use(express.json());
