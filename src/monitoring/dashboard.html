@@ -6,6 +6,15 @@
   <title>Zentinel — Monitoreo</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "preact": "https://unpkg.com/preact@10.23.2/dist/preact.module.js",
+        "preact/hooks": "https://unpkg.com/preact@10.23.2/hooks/dist/hooks.module.js",
+        "htm": "https://unpkg.com/htm@3.1.1/dist/htm.module.js"
+      }
+    }
+  </script>
   <style>
     :root {
       --bg: #0f1117;
@@ -502,9 +511,9 @@
   <div id="app"></div>
 
   <script type="module">
-    import { h, render } from "https://unpkg.com/preact@10.23.2/dist/preact.module.js";
-    import { useEffect, useRef, useState } from "https://unpkg.com/preact@10.23.2/hooks/dist/hooks.module.js";
-    import htm from "https://unpkg.com/htm@3.1.1/dist/htm.module.js";
+    import { h, render } from "preact";
+    import { useEffect, useRef, useState } from "preact/hooks";
+    import htm from "htm";
 
     const html = htm.bind(h);
     const Chart = window.Chart;

@@ -54,9 +54,12 @@ export function createMonitoringRouter(logger: MonitoringLogger, config: LoggerC
     res.type("html").send(getDashboardHtml());
   };
 
-  // GET / y GET /dashboard — Sirven la interfaz web (dashboard)
-  router.get("/", auth, serveDashboard);
-  router.get("/dashboard", auth, serveDashboard);
+  // GET / y GET /dashboard — Sirven la interfaz web (dashboard).
+  // El HTML es un shell estático sin datos: se sirve sin autenticación para que
+  // la SPA pueda mostrar su login; los endpoints /metrics, /requests y /logs
+  // siguen protegidos por basic auth.
+  router.get("/", serveDashboard);
+  router.get("/dashboard", serveDashboard);
 
   // GET /metrics — Métricas en JSON
   router.get("/metrics", auth, async (_req, res) => {

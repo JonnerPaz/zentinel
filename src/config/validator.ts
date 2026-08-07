@@ -50,7 +50,7 @@ export type RawConfig = z.infer<typeof configSchema>;
  * Lanza un error de validación si los valores no cumplen el schema.
  */
 export function validateConfig(raw: unknown): DeepPartial<LoggerConfig> {
-  const parsed = configSchema.parse(raw);
+  const parsed = configSchema.parse(raw ?? {});
 
   const result: DeepPartial<LoggerConfig> = {
     ...(parsed.batch !== undefined ? { batch: parsed.batch } : {}),
