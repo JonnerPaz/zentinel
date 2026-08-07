@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.0](https://github.com/JonnerPaz/zentinel/compare/v1.5.0...v1.6.0) (2026-08-07)
+
+
+### Features
+
+* prepare npm package for publish ([b75735c](https://github.com/JonnerPaz/zentinel/commit/b75735ce2df61ad54604c103bb9542d1cd0d5177))
+* swap entrypoint to index ([ea930b7](https://github.com/JonnerPaz/zentinel/commit/ea930b748e4af00e368b402fad49d5b7c4eb9018))
+
 ## [1.5.0](https://github.com/JonnerPaz/zentinel/compare/v1.4.0...v1.5.0) (2026-08-07)
 
 
