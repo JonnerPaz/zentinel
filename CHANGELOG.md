@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.4.0](https://github.com/JonnerPaz/zentinel/compare/v1.3.0...v1.4.0) (2026-08-07)
+
+
+### Features
+
+* **core:** add storage strategies, config system and public Logger API ([c44fe33](https://github.com/JonnerPaz/zentinel/commit/c44fe331597415ff61e828b8da7f22af0f7e887e))
+* **monitoring:** add authentication, dashboard and monitoring routes ([1296524](https://github.com/JonnerPaz/zentinel/commit/1296524c7d80282a47c41d229029198f2ea3689e))
+
+
+### Bug Fixes
+
+* **logger:** wire monitoring router and fix storage init race ([b2d21e5](https://github.com/JonnerPaz/zentinel/commit/b2d21e5effbf0a5537ad37c7f0b322757f50747d))
+
 ## [1.3.0](https://github.com/JonnerPaz/zentinel/compare/v1.2.0...v1.3.0) (2026-07-30)
 
 
