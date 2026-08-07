@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/JonnerPaz/zentinel/compare/v1.4.0...v1.5.0) (2026-08-07)
+
+
+### Features
+
+* **monitoring:** build SPA dashboard via CDN (Preact + Chart.js) ([b1a5834](https://github.com/JonnerPaz/zentinel/commit/b1a58348b6dff406cf3e9fd9c266fb57e6abdf65))
+
 ## [1.4.0](https://github.com/JonnerPaz/zentinel/compare/v1.3.0...v1.4.0) (2026-08-07)
 
 
