@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Zentinel — Monitoreo</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
   <style>
     :root {
       --bg: #0f1117;
@@ -33,9 +35,11 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 16px;
       margin-bottom: 24px;
       padding-bottom: 16px;
       border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
     }
     .header h1 {
       font-size: 22px;
@@ -68,6 +72,28 @@
       color: white;
       border-color: var(--red);
     }
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 4px;
+    }
+    .tab {
+      padding: 8px 16px;
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all .2s;
+      font-family: inherit;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active { background: var(--accent); color: white; }
     .refresh-bar {
       display: flex;
       justify-content: space-between;
@@ -75,6 +101,8 @@
       margin-bottom: 20px;
       font-size: 13px;
       color: var(--text-dim);
+      flex-wrap: wrap;
+      gap: 10px;
     }
     .refresh-bar button {
       padding: 6px 16px;
@@ -156,17 +184,7 @@
       margin-bottom: 14px;
       color: var(--text-dim);
     }
-    .bar-chart { display: flex; gap: 12px; align-items: flex-end; height: 120px; padding-top: 8px; }
-    .bar-wrapper { display: flex; flex-direction: column; align-items: center; flex: 1; height: 100%; justify-content: flex-end; }
-    .bar {
-      width: 100%;
-      max-width: 40px;
-      border-radius: 4px 4px 0 0;
-      transition: height .4s ease;
-      min-height: 4px;
-    }
-    .bar-label { font-size: 11px; color: var(--text-dim); margin-top: 6px; }
-    .bar-value { font-size: 10px; color: var(--text-dim); margin-bottom: 4px; }
+    .chart-canvas { max-height: 220px; }
     .status-donut {
       display: flex;
       align-items: center;
@@ -174,24 +192,6 @@
       gap: 24px;
       flex-wrap: wrap;
     }
-    .donut-segment {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-    }
-    .donut-circle {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
-      font-weight: 700;
-      position: relative;
-    }
-    .donut-label { font-size: 11px; color: var(--text-dim); }
     .table-container {
       background: var(--card);
       border-radius: 12px;
@@ -221,7 +221,8 @@
       border-bottom: 1px solid var(--border);
     }
     tr:last-child td { border-bottom: none; }
-    tr:hover { background: var(--card-hover); }
+    tr.row-link:hover { background: var(--card-hover); }
+    .row-link { cursor: pointer; }
     .status-badge {
       display: inline-block;
       padding: 2px 8px;
@@ -233,6 +234,30 @@
     .status-3xx { background: rgba(96, 165, 250, .15); color: var(--blue); }
     .status-4xx { background: rgba(251, 191, 36, .15); color: var(--yellow); }
     .status-5xx { background: rgba(248, 113, 113, .15); color: var(--red); }
+    .method-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .method-GET { background: rgba(52, 211, 153, .15); color: var(--green); }
+    .method-POST { background: rgba(96, 165, 250, .15); color: var(--blue); }
+    .method-PUT { background: rgba(167, 139, 250, .15); color: var(--purple); }
+    .method-DELETE { background: rgba(248, 113, 113, .15); color: var(--red); }
+    .method-PATCH { background: rgba(251, 146, 60, .15); color: var(--orange); }
+    .method-OPTIONS, .method-HEAD { background: rgba(139, 143, 163, .15); color: var(--text-dim); }
+    .level-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .level-INFO { background: rgba(96, 165, 250, .15); color: var(--blue); }
+    .level-DEBUG { background: rgba(139, 143, 163, .15); color: var(--text-dim); }
+    .level-WARNING { background: rgba(251, 191, 36, .15); color: var(--yellow); }
+    .level-ERROR { background: rgba(248, 113, 113, .15); color: var(--red); }
     .latency-bar {
       display: inline-block;
       height: 6px;
@@ -240,6 +265,7 @@
       background: var(--accent);
       min-width: 4px;
     }
+    .latency-cell { display: flex; align-items: center; gap: 8px; }
     .loading { opacity: .5; pointer-events: none; }
     .empty-state {
       text-align: center;
@@ -259,6 +285,7 @@
       display: flex;
       gap: 12px;
       flex-wrap: wrap;
+      margin-bottom: 24px;
     }
     .percentile-card {
       background: var(--card);
@@ -325,6 +352,7 @@
       font-weight: 600;
       cursor: pointer;
       transition: background .2s;
+      font-family: inherit;
     }
     .login-box button:hover { background: var(--accent-dim); }
     .login-box .error-msg {
@@ -332,95 +360,683 @@
       font-size: 13px;
       margin-top: 12px;
     }
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+      align-items: flex-end;
+    }
+    .filter-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+    .filter-field input, .filter-field select {
+      padding: 7px 10px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      font-family: inherit;
+      min-width: 130px;
+    }
+    .filter-field input:focus, .filter-field select:focus { border-color: var(--accent); }
+    .filter-field.check { flex-direction: row; align-items: center; gap: 6px; text-transform: none; letter-spacing: 0; font-size: 13px; }
+    .filter-field.check input { min-width: auto; accent-color: var(--accent); }
+    .btn {
+      padding: 7px 16px;
+      background: var(--accent);
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s;
+      font-family: inherit;
+    }
+    .btn:hover { background: var(--accent-dim); }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .pagination {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 18px;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+    .pagination button {
+      padding: 6px 14px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-family: inherit;
+    }
+    .pagination button:hover:not(:disabled) { color: var(--text); border-color: var(--accent); }
+    .pagination button:disabled { opacity: .35; cursor: not-allowed; }
+    .detail-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 900;
+      padding: 20px;
+    }
+    .detail-modal {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      width: 100%;
+      max-width: 860px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .detail-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--card);
+      z-index: 1;
+    }
+    .detail-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .detail-close {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .detail-close:hover { color: var(--red); }
+    .detail-body { padding: 16px 20px; }
+    .detail-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 18px;
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 14px;
+    }
+    .detail-meta b { color: var(--text); font-weight: 600; }
+    .detail-section { margin-bottom: 14px; }
+    .detail-section h4 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+    .detail-section pre {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 12px;
+      overflow-x: auto;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    pre.stack { color: var(--red); }
     .hidden { display: none !important; }
-    .monitoring-content.hidden { display: none; }
   </style>
 </head>
 <body>
-  <!-- Login overlay -->
-  <div id="loginOverlay" class="login-overlay hidden">
-    <div class="login-box">
-      <h2>🔐 Zentinel</h2>
-      <p>Ingresa tus credenciales de monitoreo</p>
-      <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username" />
-      <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password" />
-      <button id="loginBtn">Ingresar</button>
-      <div id="loginError" class="error-msg hidden">Credenciales inválidas</div>
-    </div>
-  </div>
+  <div id="app"></div>
 
-  <!-- Main content -->
-  <div id="mainContent" class="monitoring-content">
-    <div class="header">
-      <h1>📊 Zentinel · Monitoreo</h1>
-      <div class="header-info">
-        <span class="uptime" id="uptimeDisplay">⏱ —</span>
-        <span class="version" id="versionDisplay">v—</span>
-        <button id="logoutBtn" class="logout-btn hidden">Cerrar sesión</button>
-      </div>
-    </div>
+  <script type="module">
+    import { h, render } from "https://unpkg.com/preact@10.23.2/dist/preact.module.js";
+    import { useEffect, useRef, useState } from "https://unpkg.com/preact@10.23.2/hooks/dist/hooks.module.js";
+    import htm from "https://unpkg.com/htm@3.1.1/dist/htm.module.js";
 
-    <div class="refresh-bar">
-      <div class="auto-refresh">
-        <input type="checkbox" id="autoRefresh" checked />
-        <label for="autoRefresh">Auto-actualizar cada 10s</label>
-        <span id="lastUpdate" style="margin-left:12px;">—</span>
-      </div>
-      <button id="refreshBtn">⟳ Actualizar</button>
-    </div>
+    const html = htm.bind(h);
+    const Chart = window.Chart;
 
-    <!-- Summary cards -->
-    <div class="grid" id="summaryCards">
-      <div class="card"><div class="label">Total Requests</div><div class="value blue" id="totalRequests">—</div></div>
-      <div class="card"><div class="label">Tasa / min</div><div class="value green" id="ratePerMinute">—</div></div>
-      <div class="card"><div class="label">Latencia Promedio</div><div class="value purple" id="avgLatency">— ms</div><div class="sub" id="latencyRange">—</div></div>
-      <div class="card"><div class="label">Errores 4xx</div><div class="value yellow" id="total4xx">—</div></div>
-      <div class="card"><div class="label">Errores 5xx</div><div class="value red" id="total5xx">—</div></div>
-    </div>
+    Chart.defaults.color = "#8b8fa3";
+    Chart.defaults.borderColor = "#2a2e3a";
 
-    <!-- Percentiles -->
-    <div class="section-title">📈 <span>Percentiles de Latencia</span></div>
-    <div class="percentiles" id="percentilesContainer">
-      <div class="percentile-card"><div class="p-label">p50</div><div class="p-value p50" id="p50">—</div></div>
-      <div class="percentile-card"><div class="p-label">p95</div><div class="p-value p95" id="p95">—</div></div>
-      <div class="percentile-card"><div class="p-label">p99</div><div class="p-value p99" id="p99">—</div></div>
-    </div>
+    // Base del router de monitoreo, derivada de la URL actual
+    const BASE = (() => {
+      const p = window.location.pathname.replace(/\/$/, "");
+      if (p.endsWith("/dashboard")) return p.slice(0, -"/dashboard".length);
+      return p || "/api/monitoring";
+    })();
 
-    <!-- Charts row -->
-    <div class="charts-row">
-      <div class="chart-card">
-        <h3>🔷 Requests por Método HTTP</h3>
-        <div class="bar-chart" id="methodChart"></div>
-      </div>
-      <div class="chart-card">
-        <h3>🔶 Distribución por Status Code</h3>
-        <div class="status-donut" id="statusDonut"></div>
-      </div>
-    </div>
+    const toBase64 = (u, p) => btoa(String.fromCharCode(...new TextEncoder().encode(`${u}:${p}`)));
+    const authHeaders = (token) => ({ Authorization: `Basic ${token}`, Accept: "application/json" });
 
-    <!-- Top endpoints -->
-    <div class="section-title">🏆 <span>Top 10 Endpoints</span></div>
-    <div class="table-container" id="topEndpointsTable">
-      <h3>Más solicitados</h3>
-      <table><thead><tr><th>#</th><th>Endpoint</th><th>Requests</th><th>% del total</th></tr></thead><tbody id="topEndpointsBody"></tbody></table>
-    </div>
+    const fmtJSON = (v) => {
+      if (v === undefined || v === null) return "—";
+      try { return typeof v === "string" ? v : JSON.stringify(v, null, 2); }
+      catch { return String(v); }
+    };
+    const fmtTime = (iso) => {
+      if (!iso) return "—";
+      try { return new Date(iso).toLocaleString(); } catch { return iso; }
+    };
+    const fmtUptime = (s) => {
+      if (s == null) return "—";
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const sec = Math.floor(s % 60);
+      if (h > 0) return `${h}h ${m}m`;
+      if (m > 0) return `${m}m ${sec}s`;
+      return `${sec}s`;
+    };
+    const statusClass = (code) => `status-${Math.floor(code / 100)}xx`;
 
-    <!-- Slowest endpoints -->
-    <div class="section-title">🐢 <span>Top 10 Endpoints más Lentos</span></div>
-    <div class="table-container" id="slowestEndpointsTable">
-      <h3>Latencia promedio (ms)</h3>
-      <table><thead><tr><th>#</th><th>Endpoint</th><th>Latencia Promedio</th><th>Barra</th></tr></thead><tbody id="slowestEndpointsBody"></tbody></table>
-    </div>
+    // ── Login ────────────────────────────────────────────────
+    function Login({ onLogin }) {
+      const [user, setUser] = useState("");
+      const [pass, setPass] = useState("");
+      const [error, setError] = useState(false);
+      const [busy, setBusy] = useState(false);
 
-    <!-- Errores por endpoint -->
-    <div class="section-title">⚠️ <span>Errores por Endpoint</span></div>
-    <div class="table-container" id="errorsTable">
-      <h3>Endpoints con errores 4xx/5xx</h3>
-      <table><thead><tr><th>#</th><th>Endpoint</th><th>Errores</th></tr></thead><tbody id="errorsBody"></tbody></table>
-    </div>
+      const submit = async (e) => {
+        e.preventDefault();
+        setBusy(true);
+        setError(false);
+        const token = toBase64(user, pass);
+        try {
+          const res = await fetch(`${BASE}/metrics`, { headers: authHeaders(token) });
+          if (res.status === 401) { setError(true); return; }
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          onLogin({ token, user });
+        } catch {
+          setError(true);
+        } finally {
+          setBusy(false);
+        }
+      };
 
-    <!-- Recent requests -->
-    <div class="section-title">📋 <span>Requests Recientes</span></div>
-    <div class="table-container" id="recentRequestsTable">
-      <h3>Últimas 20 requests</h3>
-      <table><thead><tr><th>Método</th><th>Path</th><th>Status</th><th
+      return html`
+        <div class="login-overlay">
+          <form class="login-box" onSubmit=${submit}>
+            <h2>🔐 Zentinel</h2>
+            <p>Ingresa tus credenciales de monitoreo</p>
+            <input type="text" placeholder="Usuario" autocomplete="username" value=${user}
+              onInput=${(e) => setUser(e.target.value)} required />
+            <input type="password" placeholder="Contraseña" autocomplete="current-password" value=${pass}
+              onInput=${(e) => setPass(e.target.value)} required />
+            <button disabled=${busy}>${busy ? "Verificando…" : "Ingresar"}</button>
+            ${error && html`<div class="error-msg">Credenciales inválidas</div>`}
+          </form>
+        </div>`;
+    }
+
+    // ── Header / navegación ──────────────────────────────────
+    function Header({ view, setView, user, onLogout }) {
+      const tabs = [
+        ["dashboard", "Dashboard"],
+        ["requests", "Requests"],
+        ["logs", "Logs"],
+      ];
+      return html`
+        <div class="header">
+          <h1><i class="fa-solid fa-chart-line"></i> Zentinel · Monitoreo</h1>
+          <nav class="tabs">
+            ${tabs.map(([key, label]) =>
+              html`<button class=${view === key ? "tab active" : "tab"} onClick=${() => setView(key)}>${label}</button>`)}
+          </nav>
+          <div class="header-info">
+            <span><i class="fa-solid fa-user"></i> ${user}</span>
+            <button class="logout-btn" onClick=${onLogout}>Cerrar sesión</button>
+          </div>
+        </div>`;
+    }
+
+    function RefreshBar({ auto, setAuto, tick, onRefresh }) {
+      return html`
+        <div class="refresh-bar">
+          <div class="auto-refresh">
+            <input type="checkbox" id="autoRefresh" checked=${auto} onChange=${(e) => setAuto(e.target.checked)} />
+            <label for="autoRefresh">Auto-actualizar cada 10s</label>
+            <span style="margin-left:12px;">Actualizado ${new Date().toLocaleTimeString()} (ciclo #${tick})</span>
+          </div>
+          <button onClick=${onRefresh}>⟳ Actualizar</button>
+        </div>`;
+    }
+
+    // ── Detalle de request (modal) ───────────────────────────
+    function Detail({ record, onClose }) {
+      const sections = [
+        ["Request Headers", record.requestHeaders],
+        ["Request Query", record.requestQuery],
+        ["Request Body", record.requestBody],
+        ["Response Headers", record.responseHeaders],
+        ["Response Body", record.responseBody],
+      ].filter(([, v]) => v !== undefined && v !== null);
+
+      return html`
+        <div class="detail-overlay" onClick=${onClose}>
+          <div class="detail-modal" onClick=${(e) => e.stopPropagation()}>
+            <div class="detail-header">
+              <div class="detail-title">
+                <span class="method-badge method-${record.method}">${record.method}</span>
+                <strong>${record.path}</strong>
+                <span class="status-badge ${statusClass(record.statusCode)}">${record.statusCode}</span>
+              </div>
+              <button class="detail-close" onClick=${onClose} aria-label="Cerrar">✕</button>
+            </div>
+            <div class="detail-body">
+              <div class="detail-meta">
+                <span>ID: <b>${record.id}</b></span>
+                <span>Fecha: <b>${fmtTime(record.timestamp)}</b></span>
+                <span>IP: <b>${record.clientIp ?? "—"}</b></span>
+                <span>Latencia: <b>${record.latencyMs} ms</b></span>
+                <span>Tamaño: <b>${record.responseSizeBytes ?? "—"} B</b></span>
+                <span>User-Agent: <b>${record.userAgent ?? "—"}</b></span>
+              </div>
+              ${sections.map(([label, value]) =>
+                html`<div class="detail-section"><h4>${label}</h4><pre>${fmtJSON(value)}</pre></div>`)}
+              ${record.errorMessage &&
+                html`<div class="detail-section"><h4>Error</h4><pre>${record.errorMessage}</pre>
+                  ${record.stackTrace && html`<pre class="stack">${record.stackTrace}</pre>`}</div>`}
+            </div>
+          </div>
+        </div>`;
+    }
+
+    // ── Dashboard ────────────────────────────────────────────
+    function Dashboard({ creds, tick, onUnauthorized }) {
+      const [metrics, setMetrics] = useState(null);
+      const [recent, setRecent] = useState(null);
+      const [error, setError] = useState(null);
+      const [detail, setDetail] = useState(null);
+      const methodChartRef = useRef(null);
+      const statusChartRef = useRef(null);
+
+      useEffect(() => {
+        let alive = true;
+        (async () => {
+          try {
+            const [mRes, rRes] = await Promise.all([
+              fetch(`${BASE}/metrics`, { headers: authHeaders(creds.token) }),
+              fetch(`${BASE}/requests?limit=20`, { headers: authHeaders(creds.token) }),
+            ]);
+            if (mRes.status === 401 || rRes.status === 401) return onUnauthorized();
+            if (!mRes.ok || !rRes.ok) throw new Error("Respuesta inválida del servidor");
+            const m = await mRes.json();
+            const r = await rRes.json();
+            if (alive) { setMetrics(m); setRecent(r); setError(null); }
+          } catch (e) {
+            if (alive) setError(e.message);
+          }
+        })();
+        return () => { alive = false; };
+      }, [creds.token, tick]);
+
+      useEffect(() => {
+        if (!metrics) return;
+        const canvas1 = document.getElementById("methodChartCanvas");
+        const canvas2 = document.getElementById("statusDonutCanvas");
+        if (!canvas1 || !canvas2) return;
+
+        const methods = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"];
+        const c1 = new Chart(canvas1, {
+          type: "bar",
+          data: {
+            labels: methods,
+            datasets: [{
+              data: methods.map((m) => metrics.requests.byMethod[m] ?? 0),
+              backgroundColor: "#6c8cff",
+              borderRadius: 4,
+            }],
+          },
+          options: {
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+          },
+        });
+        const byStatus = metrics.requests.byStatus;
+        const c2 = new Chart(canvas2, {
+          type: "doughnut",
+          data: {
+            labels: ["2xx", "3xx", "4xx", "5xx"],
+            datasets: [{
+              data: [byStatus["2xx"], byStatus["3xx"], byStatus["4xx"], byStatus["5xx"]],
+              backgroundColor: ["#34d399", "#60a5fa", "#fbbf24", "#f87171"],
+              borderWidth: 0,
+            }],
+          },
+          options: { plugins: { legend: { position: "bottom" } } },
+        });
+        methodChartRef.current = c1;
+        statusChartRef.current = c2;
+        return () => { c1.destroy(); c2.destroy(); };
+      }, [metrics]);
+
+      if (error) return html`<div class="error-state">Error al cargar métricas: ${error}</div>`;
+      if (!metrics) return html`<div class="empty-state loading"><div class="icon">📊</div>Cargando métricas…</div>`;
+
+      const p = metrics.performance;
+      const total = metrics.requests.total;
+      const maxSlow = metrics.topLists.slowestEndpoints.length
+        ? Math.max(...metrics.topLists.slowestEndpoints.map((e) => e.avgLatency), 1)
+        : 1;
+
+      return html`
+        ${detail && html`<${Detail} record=${detail} onClose=${() => setDetail(null)} />`}
+        <div class="grid">
+          <div class="card"><div class="label">Total Requests</div><div class="value blue">${total}</div>
+            <div class="sub">tasa ${metrics.requests.ratePerMinute}/min</div></div>
+          <div class="card"><div class="label">Latencia Promedio</div><div class="value purple">${p.avgLatencyMs} ms</div>
+            <div class="sub">min ${p.minLatencyMs} · max ${p.maxLatencyMs} ms</div></div>
+          <div class="card"><div class="label">Errores 4xx</div><div class="value yellow">${metrics.errors.total4xx}</div>
+            <div class="sub">${metrics.errors.byEndpoint.length} endpoints</div></div>
+          <div class="card"><div class="label">Errores 5xx</div><div class="value red">${metrics.errors.total5xx}</div>
+            <div class="sub">uptime ${fmtUptime(metrics.system.uptime)}</div></div>
+        </div>
+
+        <div class="section-title">📈 <span>Percentiles de Latencia</span></div>
+        <div class="percentiles">
+          <div class="percentile-card"><div class="p-label">p50</div><div class="p-value p50">${p.p50} ms</div></div>
+          <div class="percentile-card"><div class="p-label">p95</div><div class="p-value p95">${p.p95} ms</div></div>
+          <div class="percentile-card"><div class="p-label">p99</div><div class="p-value p99">${p.p99} ms</div></div>
+        </div>
+
+        <div class="charts-row">
+          <div class="chart-card"><h3>🔷 Requests por Método HTTP</h3>
+            <canvas id="methodChartCanvas" class="chart-canvas"></canvas></div>
+          <div class="chart-card"><h3>🔶 Distribución por Status Code</h3>
+            <canvas id="statusDonutCanvas" class="chart-canvas"></canvas></div>
+        </div>
+
+        <div class="section-title">🏆 <span>Top 10 Endpoints</span></div>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>#</th><th>Endpoint</th><th>Requests</th><th>% del total</th></tr></thead>
+            <tbody>
+              ${metrics.topLists.topEndpoints.length === 0
+                ? html`<tr><td colspan="4" class="empty-state">Sin datos todavía</td></tr>`
+                : metrics.topLists.topEndpoints.map((ep, i) => html`
+                    <tr><td>${i + 1}</td><td><code>${ep.path}</code></td>
+                    <td>${ep.count}</td><td>${total ? ((ep.count / total) * 100).toFixed(1) : 0}%</td></tr>`)}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="section-title">🐢 <span>Top 10 Endpoints más Lentos</span></div>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>#</th><th>Endpoint</th><th>Latencia Promedio</th><th>Barra</th></tr></thead>
+            <tbody>
+              ${metrics.topLists.slowestEndpoints.length === 0
+                ? html`<tr><td colspan="4" class="empty-state">Sin datos todavía</td></tr>`
+                : metrics.topLists.slowestEndpoints.map((ep, i) => html`
+                    <tr><td>${i + 1}</td><td><code>${ep.path}</code></td>
+                    <td>${ep.avgLatency} ms</td>
+                    <td><div class="latency-cell"><span class="latency-bar"
+                      style="width:${Math.max((ep.avgLatency / maxSlow) * 200, 6)}px"></span></div></td></tr>`)}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="section-title">⚠️ <span>Errores por Endpoint</span></div>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>#</th><th>Endpoint</th><th>Errores</th></tr></thead>
+            <tbody>
+              ${metrics.errors.byEndpoint.length === 0
+                ? html`<tr><td colspan="3" class="empty-state">Sin errores 🎉</td></tr>`
+                : metrics.errors.byEndpoint.map((ep, i) => html`
+                    <tr><td>${i + 1}</td><td><code>${ep.path}</code></td><td>${ep.count}</td></tr>`)}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="section-title">📋 <span>Requests Recientes</span></div>
+        <div class="table-container">
+          <h3>Últimas 20 requests</h3>
+          <table>
+            <thead><tr><th>Método</th><th>Path</th><th>Status</th><th>Latencia</th><th>Fecha</th></tr></thead>
+            <tbody>
+              ${!recent || recent.data.length === 0
+                ? html`<tr><td colspan="5" class="empty-state">Sin requests todavía</td></tr>`
+                : recent.data.map((r) => html`
+                    <tr class="row-link" onClick=${() => setDetail(r)}>
+                      <td><span class="method-badge method-${r.method}">${r.method}</span></td>
+                      <td><code>${r.path}</code></td>
+                      <td><span class="status-badge ${statusClass(r.statusCode)}">${r.statusCode}</span></td>
+                      <td>${r.latencyMs} ms</td>
+                      <td>${fmtTime(r.timestamp)}</td>
+                    </tr>`)}
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    // ── Requests (listado + filtros + paginación) ────────────
+    function Requests({ creds, tick, onUnauthorized }) {
+      const [draft, setDraft] = useState({ method: "", status: "", path: "", from: "", to: "", errors: false, latencyMin: "", latencyMax: "" });
+      const [filters, setFilters] = useState(null);
+      const [limit, setLimit] = useState(20);
+      const [order, setOrder] = useState("desc");
+      const [cursor, setCursor] = useState(null);
+      const [result, setResult] = useState(null);
+      const [error, setError] = useState(null);
+      const [loading, setLoading] = useState(false);
+      const [detail, setDetail] = useState(null);
+
+      useEffect(() => {
+        let alive = true;
+        (async () => {
+          setLoading(true);
+          try {
+            const qs = new URLSearchParams();
+            qs.set("limit", String(limit));
+            qs.set("order", order);
+            if (cursor) qs.set("cursor", cursor);
+            if (filters) {
+              if (filters.method) qs.set("methods", filters.method);
+              if (filters.status) qs.set("statusCodes", filters.status);
+              if (filters.path) qs.set("path", filters.path);
+              if (filters.from) qs.set("from", new Date(filters.from).toISOString());
+              if (filters.to) qs.set("to", new Date(filters.to).toISOString());
+              if (filters.latencyMin) qs.set("latencyMin", filters.latencyMin);
+              if (filters.latencyMax) qs.set("latencyMax", filters.latencyMax);
+              if (filters.errors) qs.set("errors", "true");
+            }
+            const res = await fetch(`${BASE}/requests?${qs}`, { headers: authHeaders(creds.token) });
+            if (res.status === 401) return onUnauthorized();
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            if (alive) { setResult(data); setError(null); }
+          } catch (e) {
+            if (alive) setError(e.message);
+          } finally {
+            if (alive) setLoading(false);
+          }
+        })();
+        return () => { alive = false; };
+      }, [creds.token, tick, limit, order, cursor, filters]);
+
+      const applyFilters = () => { setFilters(draft); setCursor(null); };
+      const set = (key) => (e) => setDraft({ ...draft, [key]: e.target.value });
+
+      return html`
+        ${detail && html`<${Detail} record=${detail} onClose=${() => setDetail(null)} />`}
+        <div class="section-title">🔎 <span>Filtros</span></div>
+        <div class="filters">
+          <div class="filter-field"><label>Método</label>
+            <select value=${draft.method} onChange=${set("method")}>
+              <option value="">Todos</option>
+              ${["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"].map((m) =>
+                html`<option value=${m}>${m}</option>`)}
+            </select></div>
+          <div class="filter-field"><label>Status</label>
+            <input type="text" placeholder="200, 4xx, 500" value=${draft.status} onInput=${set("status")} /></div>
+          <div class="filter-field"><label>Path contiene</label>
+            <input type="text" placeholder="/api/users" value=${draft.path} onInput=${set("path")} /></div>
+          <div class="filter-field"><label>Desde</label>
+            <input type="date" value=${draft.from} onChange=${set("from")} /></div>
+          <div class="filter-field"><label>Hasta</label>
+            <input type="date" value=${draft.to} onChange=${set("to")} /></div>
+          <div class="filter-field"><label>Lat. min (ms)</label>
+            <input type="number" placeholder="100" value=${draft.latencyMin} onInput=${set("latencyMin")} /></div>
+          <div class="filter-field"><label>Lat. max (ms)</label>
+            <input type="number" placeholder="500" value=${draft.latencyMax} onInput=${set("latencyMax")} /></div>
+          <div class="filter-field check">
+            <input type="checkbox" id="onlyErrors" checked=${draft.errors} onChange=${(e) => setDraft({ ...draft, errors: e.target.checked })} />
+            <label for="onlyErrors">Solo errores</label>
+          </div>
+          <button class="btn" onClick=${applyFilters}><i class="fa-solid fa-magnifying-glass"></i> Buscar</button>
+        </div>
+
+        ${error && html`<div class="error-state">Error al obtener requests: ${error}</div>`}
+        <div class="table-container ${loading ? "loading" : ""}">
+          <h3>Requests (${result ? result.pagination.totalCount : "…"} registros)</h3>
+          <table>
+            <thead><tr><th>Método</th><th>Path</th><th>Status</th><th>Latencia</th><th>IP</th><th>Fecha</th></tr></thead>
+            <tbody>
+              ${!result
+                ? html`<tr><td colspan="6" class="empty-state">Cargando…</td></tr>`
+                : result.data.length === 0
+                  ? html`<tr><td colspan="6" class="empty-state">Sin resultados</td></tr>`
+                  : result.data.map((r) => html`
+                      <tr class="row-link" onClick=${() => setDetail(r)}>
+                        <td><span class="method-badge method-${r.method}">${r.method}</span></td>
+                        <td><code>${r.path}</code></td>
+                        <td><span class="status-badge ${statusClass(r.statusCode)}">${r.statusCode}</span></td>
+                        <td>${r.latencyMs} ms</td>
+                        <td>${r.clientIp ?? "—"}</td>
+                        <td>${fmtTime(r.timestamp)}</td>
+                      </tr>`)}
+            </tbody>
+          </table>
+          ${result && html`
+            <div class="pagination">
+              <span>${result.data.length} de ${result.pagination.totalCount}</span>
+              <button disabled=${!result.pagination.prevCursor} onClick=${() => setCursor(result.pagination.prevCursor)}>← Anterior</button>
+              <button disabled=${!result.pagination.hasMore} onClick=${() => setCursor(result.pagination.nextCursor)}>Siguiente →</button>
+            </div>`}
+        </div>`;
+    }
+
+    // ── Logs ─────────────────────────────────────────────────
+    function Logs({ creds, tick, onUnauthorized }) {
+      const [levels, setLevels] = useState("");
+      const [limit, setLimit] = useState(50);
+      const [order, setOrder] = useState("desc");
+      const [cursor, setCursor] = useState(null);
+      const [result, setResult] = useState(null);
+      const [error, setError] = useState(null);
+      const [loading, setLoading] = useState(false);
+
+      useEffect(() => {
+        let alive = true;
+        (async () => {
+          setLoading(true);
+          try {
+            const qs = new URLSearchParams();
+            qs.set("limit", String(limit));
+            qs.set("order", order);
+            if (cursor) qs.set("cursor", cursor);
+            if (levels) qs.set("levels", levels);
+            const res = await fetch(`${BASE}/logs?${qs}`, { headers: authHeaders(creds.token) });
+            if (res.status === 401) return onUnauthorized();
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            if (alive) { setResult(data); setError(null); }
+          } catch (e) {
+            if (alive) setError(e.message);
+          } finally {
+            if (alive) setLoading(false);
+          }
+        })();
+        return () => { alive = false; };
+      }, [creds.token, tick, levels, limit, order, cursor]);
+
+      const onLevel = (e) => {
+        setCursor(null);
+        setLevels(e.target.value === "ALL" ? "" : e.target.value);
+      };
+
+      return html`
+        <div class="section-title">📝 <span>Logs de la aplicación</span></div>
+        <div class="filters">
+          <div class="filter-field"><label>Nivel</label>
+            <select value=${levels || "ALL"} onChange=${onLevel}>
+              <option value="ALL">Todos</option>
+              ${["INFO", "WARNING", "ERROR", "DEBUG"].map((l) => html`<option value=${l}>${l}</option>`)}
+            </select></div>
+        </div>
+
+        ${error && html`<div class="error-state">Error al obtener logs: ${error}</div>`}
+        <div class="table-container ${loading ? "loading" : ""}">
+          <h3>Logs (${result ? result.pagination.totalCount : "…"} registros)</h3>
+          <table>
+            <thead><tr><th>Nivel</th><th>Mensaje</th><th>Metadata</th><th>Contexto</th><th>Fecha</th></tr></thead>
+            <tbody>
+              ${!result
+                ? html`<tr><td colspan="5" class="empty-state">Cargando…</td></tr>`
+                : result.data.length === 0
+                  ? html`<tr><td colspan="5" class="empty-state">Sin logs todavía</td></tr>`
+                  : result.data.map((l) => html`
+                      <tr>
+                        <td><span class="level-badge level-${l.level}">${l.level}</span></td>
+                        <td>${l.message}</td>
+                        <td>${l.metadata ? fmtJSON(l.metadata) : "—"}</td>
+                        <td>${l.context ? `${l.context.file}${l.context.line ? ":" + l.context.line : ""}` : "—"}</td>
+                        <td>${fmtTime(l.timestamp)}</td>
+                      </tr>`)}
+            </tbody>
+          </table>
+          ${result && html`
+            <div class="pagination">
+              <span>${result.data.length} de ${result.pagination.totalCount}</span>
+              <button disabled=${!result.pagination.prevCursor} onClick=${() => setCursor(result.pagination.prevCursor)}>← Anterior</button>
+              <button disabled=${!result.pagination.hasMore} onClick=${() => setCursor(result.pagination.nextCursor)}>Siguiente →</button>
+            </div>`}
+        </div>`;
+    }
+
+    // ── App raíz ─────────────────────────────────────────────
+    function App() {
+      const [creds, setCreds] = useState(null);
+      const [view, setView] = useState("dashboard");
+      const [tick, setTick] = useState(0);
+      const [auto, setAuto] = useState(true);
+
+      useEffect(() => {
+        if (!auto) return;
+        const t = setInterval(() => setTick((x) => x + 1), 10000);
+        return () => clearInterval(t);
+      }, [auto, creds]);
+
+      const onUnauthorized = () => setCreds(null);
+      const refresh = () => setTick((x) => x + 1);
+
+      if (!creds) return html`<${Login} onLogin=${setCreds} />`;
+
+      return html`
+        <div class="monitoring-content">
+          <${Header} view=${view} setView=${setView} user=${creds.user} onLogout=${onUnauthorized} />
+          <${RefreshBar} auto=${auto} setAuto=${setAuto} tick=${tick} onRefresh=${refresh} />
+          ${view === "dashboard" && html`<${Dashboard} creds=${creds} tick=${tick} onUnauthorized=${onUnauthorized} />`}
+          ${view === "requests" && html`<${Requests} creds=${creds} tick=${tick} onUnauthorized=${onUnauthorized} />`}
+          ${view === "logs" && html`<${Logs} creds=${creds} tick=${tick} onUnauthorized=${onUnauthorized} />`}
+        </div>`;
+    }
+
+    render(html`<${App} />`, document.getElementById("app"));
+  </script>
+</body>
+</html>
